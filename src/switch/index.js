@@ -90,11 +90,7 @@ AFRAME.registerComponent('switch', {
     if (this.data.disabled) {
       this.disable();
     }
-  },
-  tick: function () {},
-  remove: function () {},
-  pause: function () {},
-  play: function () {}
+  }
 });
 
 AFRAME.registerPrimitive('a-switch', {

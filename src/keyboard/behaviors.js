@@ -11,87 +11,38 @@ Behaviors.el = null;
 // KEYBOARD METHODS
 
 Behaviors.showKeyboard = function(el) {
-  if (el.o_position) {
-    el.object3D.position.copy(el.o_position);
-  }
   el.isOpen = true;
-  for(let item of el.querySelectorAll('[data-ui]') ) {
-    for (let child of item.children) {
-      child.setAttribute('show', true);
-    }
+  let p = el.object3D.position;
+  console.log('show keyboard position')
+  console.log(p.x)
+  console.log(p.y)
+  console.log(p.z)
+  if (p.x === -10000 && p.y === -10000 && p.z === -10000) {
+    el.object3D.position.set(0, 0, 0);
   }
-  let parent = el.parentNode;
-  if (parent) { return; }
-  el.sceneEl.appendChild(el);
+  !el.parentNode && el.sceneEl.appendChild(el);
 };
 
 Behaviors.hideKeyboard = function(el) {
-  let position = el.getAttribute("position");
-  if (position.x !== -10000) {
-    if (!el.o_position) {
-      el.o_position = new THREE.Vector3();
-    }
-    el.o_position.copy(position);
-  }
   el.isOpen = false;
-  el.setAttribute("position", "-10000 -10000 -10000");
-  el.setAttribute('fadeout', {duration: 1});
+  // TODO: Figure out a better way to hide stuff.
+  el.object3D.position.set(-10000, -10000, -10000);
 }
 
 Behaviors.destroyKeyboard = function(el) {
   let parent = el.parentNode;
   if (!parent) { return; }
-  parent.removeChild(el);
+  parent && parent.removeChild(el);
 };
 
 Behaviors.openKeyboard = function(el) {
-  if (el.o_position) {
-    el.object3D.position.copy(el.o_position);
-  }
-  el.isOpen = true;
-  el._transitioning = true;
-  let parent = el.parentNode;
-  if (!parent) { el.sceneEl.appendChild(el); }
-  for(let item of el.querySelectorAll('[data-ui]') ) {
-    for (let child of item.children) {
-      child.setAttribute('hide', true);
-    }
-    function animationend() {
-      item.children[0].removeEventListener('animationend', animationend)
-      setTimeout(function() {
-        item.children[1].setAttribute('fadein', {duration: 160});
-        Event.emit(Behaviors.el, 'didopen');
-        el._transitioning = false;
-      }, 10)
-    }
-    item.children[0].setAttribute('fadein', {duration: 160});
-    item.children[0].addEventListener('animationend', animationend)
-  }
+  Behaviors.showKeyboard(el);
+  Event.emit(Behaviors.el, 'didopen');
 };
 
 Behaviors.dismissKeyboard = function(el) {
-  el._transitioning = true;
-  for(let item of el.querySelectorAll('[data-ui]') ) {
-    for (let child of item.children) {
-      child.setAttribute('show', true);
-    }
-    el.isOpen = false;
-    function animationend() {
-      item.children[1].removeEventListener('animationend', animationend)
-      setTimeout(function() {
-        function animationend() {
-          item.children[0].removeEventListener('animationend', animationend);
-          Behaviors.hideKeyboard(el);
-          Event.emit(Behaviors.el, 'diddismiss');
-          el._transitioning = false;
-        }
-        item.children[0].setAttribute('fadeout', {duration: 160});
-        item.children[0].addEventListener('animationend', animationend);
-      }, 10)
-    }
-    item.children[1].setAttribute('fadeout', {duration: 160});
-    item.children[1].addEventListener('animationend', animationend)
-  }
+  Behaviors.hideKeyboard(el);
+  Event.emit(Behaviors.el, 'diddismiss');
 };
 
 // -----------------------------------------------------------------------------
@@ -149,7 +100,6 @@ Behaviors.keyClick = function() {
 // KEYDOWN
 
 Behaviors.keyDown = function() {
-  if (Behaviors.el._transitioning) { return; }
   this.object3D.position.z = 0.003;
   if (this.getAttribute('key-type') === 'spacebar') {
     this.setAttribute('color', Config.SPACEBAR_COLOR_ACTIVE);
@@ -162,7 +112,6 @@ Behaviors.keyDown = function() {
 // KEYIN
 
 Behaviors.keyIn = function() {
-  if (Behaviors.el._transitioning) { return; }
   if (this.object3D.children[2] && this.object3D.children[2].material && !this.object3D.children[2].material.opacity) {
     return
   }

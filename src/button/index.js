@@ -71,9 +71,6 @@ AFRAME.registerComponent('button', {
       configurable: true
     });
   },
-  onClick: function() {
-    //Event.emit(this.el, 'click');
-  },
   getWidth: function() {
     return this.__width;
   },
@@ -172,11 +169,7 @@ AFRAME.registerComponent('button', {
         }, 10)
       }
     }, 0);
-  },
-  tick: function () {},
-  remove: function () {},
-  pause: function () {},
-  play: function () {}
+  }
 });
 
 AFRAME.registerPrimitive('a-button', {

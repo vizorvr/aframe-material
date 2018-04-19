@@ -62,15 +62,12 @@
 	  }
 	  __webpack_require__(2);
 	  __webpack_require__(3);
-	  //require("./alert"); @TODO ;)
-	  __webpack_require__(5);
 	  __webpack_require__(13);
 	  __webpack_require__(14);
 	  __webpack_require__(17);
 	  __webpack_require__(18);
 	  __webpack_require__(21);
 	  __webpack_require__(24);
-	  __webpack_require__(27);
 	})();
 
 /***/ }),
@@ -85,149 +82,20 @@
 
 	'use strict';
 	
-	var Event = __webpack_require__(4);
-	
-	var opacityUpdate = function opacityUpdate(opacity) {
-	  this.el.object3D.traverse(function (o) {
-	    if (o.material) {
-	      o.material.transparent = true;
-	      o.material.opacity = opacity;
-	    }
-	  });
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
-	
-	  try {
-	    for (var _iterator = this.textEntities[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var text = _step.value;
-	
-	      text.setAttribute('opacity', opacity);
-	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
-	    }
-	  }
-	};
-	
-	// -----------------------------------------------------------------------------
-	// FADEIN
-	
-	AFRAME.registerComponent('fadein', {
-	  schema: {
-	    duration: { type: 'int', default: 200 }
-	  },
-	  init: function init() {
-	    this.textEntities = this.el.querySelectorAll('a-text');
-	    this.opacityUpdate(0);
-	    this.start = null;
-	  },
-	  tick: function tick(t) {
-	    if (!this.start) {
-	      this.start = t;
-	    }
-	    var opacity = Math.min((t - this.start) / this.data.duration, 1);
-	    this.opacityUpdate(opacity);
-	    if (opacity === 1) {
-	      this.el.removeAttribute('fadein');
-	      Event.emit(this.el, 'animationend');
-	    }
-	  },
-	  opacityUpdate: opacityUpdate
-	});
-	
-	// -----------------------------------------------------------------------------
-	// FADEOUT
-	
-	AFRAME.registerComponent('fadeout', {
-	  schema: {
-	    duration: { type: 'int', default: 200 }
-	  },
-	  init: function init() {
-	    this.textEntities = this.el.querySelectorAll('a-text');
-	    this.opacityUpdate(1);
-	    this.start = null;
-	  },
-	  tick: function tick(t) {
-	    if (!this.start) {
-	      this.start = t;
-	    }
-	    var opacity = 1 - Math.min((t - this.start) / this.data.duration, 1);
-	    this.opacityUpdate(opacity);
-	    if (opacity === 0) {
-	      this.el.removeAttribute('fadeout');
-	      Event.emit(this.el, 'animationend');
-	    }
-	  },
-	  opacityUpdate: opacityUpdate
-	});
-	
-	// -----------------------------------------------------------------------------
-	// SHOW
-	
-	AFRAME.registerComponent('show', {
-	  init: function init() {
-	    this.textEntities = this.el.querySelectorAll('a-text');
-	    this.opacityUpdate(1);
-	    this.el.removeAttribute('show');
-	  },
-	  opacityUpdate: opacityUpdate
-	});
-	
-	// -----------------------------------------------------------------------------
-	// HIDE
-	
-	AFRAME.registerComponent('hide', {
-	  init: function init() {
-	    this.textEntities = this.el.querySelectorAll('a-text');
-	    this.opacityUpdate(0);
-	    this.el.removeAttribute('hide');
-	  },
-	  opacityUpdate: opacityUpdate
-	});
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-	"use strict";
-	
-	module.exports = {
-	  emit: function emit(el, name, data) {
-	    el.dispatchEvent(new CustomEvent(name, { detail: data }));
-	  }
-	};
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	var Utils = __webpack_require__(6);
-	var Assets = __webpack_require__(7);
-	var Draw = __webpack_require__(8);
-	var Behaviors = __webpack_require__(11);
-	var SFX = __webpack_require__(12);
+	var Utils = __webpack_require__(4);
+	var Draw = __webpack_require__(5);
+	var Behaviors = __webpack_require__(9);
+	var SFX = __webpack_require__(11);
+	var Event = __webpack_require__(10);
 	
 	AFRAME.registerComponent('keyboard', {
 	  schema: {
-	    isOpen: { type: "boolean", default: false }
+	    isOpen: { type: "boolean", default: false },
+	    physicalKeyboard: { type: "boolean", default: false }
 	  },
 	  currentInput: null,
 	  init: function init() {
-	    // Assets
-	    Utils.preloadAssets(Assets);
+	    var that = this;
 	
 	    // SFX
 	    SFX.init(this.el);
@@ -235,13 +103,16 @@
 	    // Draw
 	    Draw.init(this.el);
 	
+	    // Init keyboard UI
 	    var numericalUI = Draw.numericalUI(),
 	        mainUI = Draw.mainUI(),
 	        actionsUI = Draw.actionsUI();
 	
+	    // Create layout
 	    this.el.alphabeticalLayout = Draw.alphabeticalLayout();
 	    this.el.symbolsLayout = Draw.symbolsLayout();
 	
+	    // Append layouts to UI
 	    numericalUI.appendChild(Draw.numericalLayout());
 	    mainUI.appendChild(this.el.alphabeticalLayout);
 	    actionsUI.appendChild(Draw.actionsLayout());
@@ -267,39 +138,28 @@
 	      Behaviors.destroyKeyboard(that.el);
 	    };
 	
+	    // Bind event handlers
+	    this.inputEvent = this.inputEvent.bind(this);
+	    this.backspaceEvent = this.backspaceEvent.bind(this);
+	    this.dismissEvent = this.dismissEvent.bind(this);
+	    this.keydownEvent = this.keydownEvent.bind(this);
+	    this.didFocusInputEvent = this.didFocusInputEvent.bind(this);
+	    this.didBlurInputEvent = this.didBlurInputEvent.bind(this);
+	
+	    // Set default value
 	    this.el.setAttribute("scale", "2 2 2");
 	    this.el.setAttribute("rotation", "-20 0 0");
 	    this.el.setAttribute("position", "-1.5 -0.3 -2");
 	
-	    var that = this;
-	    this.el.addEventListener('input', function (e) {
-	      if (that.currentInput) {
-	        that.currentInput.appendString(e.detail);
-	      }
-	    });
-	    this.el.addEventListener('backspace', function (e) {
-	      if (that.currentInput) {
-	        that.currentInput.deleteLast();
-	      }
-	    });
-	    this.el.addEventListener('dismiss', function (e) {
-	      if (that.currentInput) {
-	        that.currentInput.blur();
-	      }
-	    });
-	    document.body.addEventListener('didfocusinput', function (e) {
-	      if (that.currentInput) {
-	        that.currentInput.blur(true);
-	      }
-	      that.currentInput = e.detail;
-	      if (!that.el.isOpen) {
-	        Behaviors.openKeyboard(that.el);
-	      }
-	    });
-	    document.body.addEventListener('didblurinput', function (e) {
-	      that.currentInput = null;
-	      Behaviors.dismissKeyboard(that.el);
-	    });
+	    // Register keyboard events
+	    this.el.addEventListener('input', this.inputEvent);
+	    this.el.addEventListener('backspace', this.backspaceEvent);
+	    this.el.addEventListener('dismiss', this.dismissEvent);
+	
+	    // Register global events
+	    document.addEventListener('keydown', this.keydownEvent);
+	    document.body.addEventListener('didfocusinput', this.didFocusInputEvent);
+	    document.body.addEventListener('didblurinput', this.didBlurInputEvent);
 	  },
 	  update: function update() {
 	    if (this.data.isOpen) {
@@ -309,9 +169,67 @@
 	    }
 	  },
 	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  remove: function remove() {
+	    this.el.removeEventListener('input', this.inputEvent);
+	    this.el.removeEventListener('backspace', this.backspaceEvent);
+	    this.el.removeEventListener('dismiss', this.dismissEvent);
+	
+	    document.removeEventListener('keydown', this.keydownEvent);
+	    document.body.removeEventListener('didfocusinput', this.didFocusInputEvent);
+	    document.body.removeEventListener('didblurinput', this.didBlurInputEvent);
+	  },
+	
+	  // Fired on keyboard key press
+	  inputEvent: function inputEvent(e) {
+	    if (this.currentInput) {
+	      this.currentInput.appendString(e.detail);
+	    }
+	  },
+	
+	  // Fired on backspace key press
+	  backspaceEvent: function backspaceEvent(e) {
+	    if (this.currentInput) {
+	      this.currentInput.deleteLast();
+	    }
+	  },
+	
+	  dismissEvent: function dismissEvent(e) {
+	    if (this.currentInput) {
+	      this.currentInput.blur();
+	    }
+	  },
+	
+	  // physical keyboard event
+	  keydownEvent: function keydownEvent(e) {
+	    if (this.currentInput && this.data.physicalKeyboard) {
+	      e.preventDefault();
+	      e.stopPropagation();
+	
+	      if (e.key === 'Enter') {
+	        Event.emit(Behaviors.el, 'input', '\n');
+	        Event.emit(Behaviors.el, 'enter', '\n');
+	      } else if (e.key === 'Backspace') {
+	        Event.emit(Behaviors.el, 'backspace');
+	      } else if (e.key === 'Escape') {
+	        Event.emit(Behaviors.el, 'dismiss');
+	      } else if (e.key.length < 2) {
+	        Event.emit(Behaviors.el, 'input', e.key);
+	      }
+	    }
+	  },
+	
+	  // Fired when an input has been selected
+	  didFocusInputEvent: function didFocusInputEvent(e) {
+	    if (this.currentInput) this.currentInput.blur(true);
+	    this.currentInput = e.detail;
+	    if (!this.el.isOpen) Behaviors.openKeyboard(this.el);
+	  },
+	
+	  // Fired when an input has been deselected
+	  didBlurInputEvent: function didBlurInputEvent(e) {
+	    this.currentInput = null;
+	    Behaviors.dismissKeyboard(this.el);
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-keyboard', {
@@ -319,12 +237,13 @@
 	    keyboard: {}
 	  },
 	  mappings: {
-	    'is-open': 'keyboard.isOpen'
+	    'is-open': 'keyboard.isOpen',
+	    'physical-keyboard': 'keyboard.physicalKeyboard'
 	  }
 	});
 
 /***/ }),
-/* 6 */
+/* 4 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -355,12 +274,13 @@
 	
 	      already_exists = false;
 	
+	      /***** With Edge, assets.children is a HTMLCollection, not an Array! *****/
 	      var _iteratorNormalCompletion2 = true;
 	      var _didIteratorError2 = false;
 	      var _iteratorError2 = undefined;
 	
 	      try {
-	        for (var _iterator2 = assets.children[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	        for (var _iterator2 = Array.from(assets.children)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
 	          var stuff = _step2.value;
 	
 	          if (item.id === stuff.id) {
@@ -490,22 +410,15 @@
 	module.exports = Utils;
 
 /***/ }),
-/* 7 */
-/***/ (function(module, exports) {
-
-	'use strict';
-	
-	module.exports = [{ type: 'img', id: 'aframeKeyboardShift', src: AFRAME.ASSETS_PATH + '/images/ShiftIcon.png' }, { type: 'img', id: 'aframeKeyboardShiftActive', src: AFRAME.ASSETS_PATH + '/images/ShiftActiveIcon.png' }, { type: 'img', id: 'aframeKeyboardGlobal', src: AFRAME.ASSETS_PATH + '/images/GlobalIcon.png' }, { type: 'img', id: 'aframeKeyboardBackspace', src: AFRAME.ASSETS_PATH + '/images/BackspaceIcon.png' }, { type: 'img', id: 'aframeKeyboardEnter', src: AFRAME.ASSETS_PATH + '/images/EnterIcon.png' }, { type: 'img', id: 'aframeKeyboardDismiss', src: AFRAME.ASSETS_PATH + '/images/DismissIcon.png' }, { type: 'img', id: 'aframeKeyboardShadow', src: AFRAME.ASSETS_PATH + '/images/KeyShadow.png' }, { type: 'audio', id: 'aframeKeyboardKeyIn', src: AFRAME.ASSETS_PATH + '/sounds/KeyIn.mp3' }, { type: 'audio', id: 'aframeKeyboardKeyDown', src: AFRAME.ASSETS_PATH + '/sounds/KeyDown.mp3' }];
-
-/***/ }),
-/* 8 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var Layouts = __webpack_require__(9);
-	var Config = __webpack_require__(10);
-	var Behaviors = __webpack_require__(11);
+	var Assets = __webpack_require__(6);
+	var Layouts = __webpack_require__(7);
+	var Config = __webpack_require__(8);
+	var Behaviors = __webpack_require__(9);
 	var Draw = {};
 	
 	Draw.el = null;
@@ -747,7 +660,7 @@
 	  el.shadow_el.setAttribute('width', Config.KEY_WIDTH * 1.25);
 	  el.shadow_el.setAttribute('height', Config.KEY_WIDTH * 1.25);
 	  el.shadow_el.setAttribute('position', Config.KEY_WIDTH / 2 + ' ' + Config.KEY_WIDTH / 2 + ' -0.002');
-	  el.shadow_el.setAttribute('src', '#aframeKeyboardShadow');
+	  el.shadow_el.setAttribute('src', Assets.aframeKeyboardShadow);
 	  el.appendChild(el.shadow_el);
 	
 	  // ---------------------------------------------------------------------------
@@ -804,7 +717,7 @@
 	    icon_el.setAttribute('width', '0.032');
 	    icon_el.setAttribute('height', '0.032');
 	    icon_el.setAttribute('position', '0.04 0.04 0.01');
-	    icon_el.setAttribute('src', '#aframeKeyboardShift');
+	    icon_el.setAttribute('src', Assets.aframeKeyboardShift);
 	    el.appendChild(icon_el);
 	    Draw.el.shiftKey = el;
 	  }
@@ -817,7 +730,7 @@
 	      icon_el.setAttribute('width', '0.032');
 	      icon_el.setAttribute('height', '0.032');
 	      icon_el.setAttribute('position', '0.04 0.04 0.01');
-	      icon_el.setAttribute('src', '#aframeKeyboardGlobal');
+	      icon_el.setAttribute('src', Assets.aframeKeyboardGlobal);
 	      el.appendChild(icon_el);
 	    }
 	
@@ -829,7 +742,7 @@
 	        icon_el.setAttribute('width', '0.046');
 	        icon_el.setAttribute('height', '0.046');
 	        icon_el.setAttribute('position', '0.07 0.04 0.01');
-	        icon_el.setAttribute('src', '#aframeKeyboardBackspace');
+	        icon_el.setAttribute('src', Assets.aframeKeyboardBackspace);
 	        el.appendChild(icon_el);
 	      }
 	
@@ -851,7 +764,7 @@
 	          icon_el.setAttribute('width', '0.034');
 	          icon_el.setAttribute('height', '0.034');
 	          icon_el.setAttribute('position', '0.07 0.07 0.011');
-	          icon_el.setAttribute('src', '#aframeKeyboardEnter');
+	          icon_el.setAttribute('src', Assets.aframeKeyboardEnter);
 	          el.appendChild(icon_el);
 	        }
 	
@@ -863,7 +776,7 @@
 	            icon_el.setAttribute('width', '0.046');
 	            icon_el.setAttribute('height', '0.046');
 	            icon_el.setAttribute('position', '0.07 0.04 0.01');
-	            icon_el.setAttribute('src', '#aframeKeyboardDismiss');
+	            icon_el.setAttribute('src', Assets.aframeKeyboardDismiss);
 	            el.appendChild(icon_el);
 	          }
 	
@@ -873,7 +786,25 @@
 	module.exports = Draw;
 
 /***/ }),
-/* 9 */
+/* 6 */
+/***/ (function(module, exports) {
+
+	"use strict";
+	
+	module.exports = {
+	  aframeKeyboardShift: AFRAME.ASSETS_PATH + "/images/ShiftIcon.png",
+	  aframeKeyboardShiftActive: AFRAME.ASSETS_PATH + "/images/ShiftActiveIcon.png",
+	  aframeKeyboardGlobal: AFRAME.ASSETS_PATH + "/images/GlobalIcon.png",
+	  aframeKeyboardBackspace: AFRAME.ASSETS_PATH + "/images/BackspaceIcon.png",
+	  aframeKeyboardEnter: AFRAME.ASSETS_PATH + "/images/EnterIcon.png",
+	  aframeKeyboardDismiss: AFRAME.ASSETS_PATH + "/images/DismissIcon.png",
+	  aframeKeyboardShadow: AFRAME.ASSETS_PATH + "/images/KeyShadow.png",
+	  aframeKeyboardKeyIn: AFRAME.ASSETS_PATH + "/sounds/KeyIn.mp3",
+	  aframeKeyboardKeyDown: AFRAME.ASSETS_PATH + "/sounds/KeyDown.mp3"
+	};
+
+/***/ }),
+/* 7 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -891,7 +822,7 @@
 	module.exports = Layouts;
 
 /***/ }),
-/* 10 */
+/* 8 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -911,15 +842,16 @@
 	module.exports = Config;
 
 /***/ }),
-/* 11 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var Config = __webpack_require__(10);
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
-	var SFX = __webpack_require__(12);
+	var Assets = __webpack_require__(6);
+	var Config = __webpack_require__(8);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
+	var SFX = __webpack_require__(11);
 	var Behaviors = {};
 	
 	Behaviors.el = null;
@@ -928,72 +860,22 @@
 	// KEYBOARD METHODS
 	
 	Behaviors.showKeyboard = function (el) {
-	  if (el.o_position) {
-	    el.setAttribute("position", el.o_position);
-	  }
 	  el.isOpen = true;
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
-	
-	  try {
-	    for (var _iterator = el.querySelectorAll('[data-ui]')[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var item = _step.value;
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-	
-	      try {
-	        for (var _iterator2 = item.children[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var child = _step2.value;
-	
-	          child.setAttribute('show', true);
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
-	    }
+	  var p = el.object3D.position;
+	  console.log('show keyboard position');
+	  console.log(p.x);
+	  console.log(p.y);
+	  console.log(p.z);
+	  if (p.x === -10000 && p.y === -10000 && p.z === -10000) {
+	    el.object3D.position.set(0, 0, 0);
 	  }
-	
-	  var parent = el.parentNode;
-	  if (parent) {
-	    return;
-	  }
-	  el.sceneEl.appendChild(el);
+	  !el.parentNode && el.sceneEl.appendChild(el);
 	};
 	
 	Behaviors.hideKeyboard = function (el) {
-	  var position = el.getAttribute("position");
-	  if (position.x !== -10000) {
-	    el.o_position = position;
-	  }
 	  el.isOpen = false;
-	  el.setAttribute("position", "-10000 -10000 -10000");
-	  el.setAttribute('fadeout', { duration: 1 });
+	  // TODO: Figure out a better way to hide stuff.
+	  el.object3D.position.set(-10000, -10000, -10000);
 	};
 	
 	Behaviors.destroyKeyboard = function (el) {
@@ -1001,151 +883,17 @@
 	  if (!parent) {
 	    return;
 	  }
-	  parent.removeChild(el);
+	  parent && parent.removeChild(el);
 	};
 	
 	Behaviors.openKeyboard = function (el) {
-	  if (el.o_position) {
-	    el.setAttribute("position", el.o_position);
-	  }
-	  el.isOpen = true;
-	  el._transitioning = true;
-	  var parent = el.parentNode;
-	  if (!parent) {
-	    el.sceneEl.appendChild(el);
-	  }
-	  var _iteratorNormalCompletion3 = true;
-	  var _didIteratorError3 = false;
-	  var _iteratorError3 = undefined;
-	
-	  try {
-	    var _loop = function _loop() {
-	      var item = _step3.value;
-	      var _iteratorNormalCompletion4 = true;
-	      var _didIteratorError4 = false;
-	      var _iteratorError4 = undefined;
-	
-	      try {
-	        for (var _iterator4 = item.children[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	          var child = _step4.value;
-	
-	          child.setAttribute('hide', true);
-	        }
-	      } catch (err) {
-	        _didIteratorError4 = true;
-	        _iteratorError4 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	            _iterator4.return();
-	          }
-	        } finally {
-	          if (_didIteratorError4) {
-	            throw _iteratorError4;
-	          }
-	        }
-	      }
-	
-	      function animationend() {
-	        item.children[0].removeEventListener('animationend', animationend);
-	        setTimeout(function () {
-	          item.children[1].setAttribute('fadein', { duration: 160 });
-	          Event.emit(Behaviors.el, 'didopen');
-	          el._transitioning = false;
-	        }, 10);
-	      }
-	      item.children[0].setAttribute('fadein', { duration: 160 });
-	      item.children[0].addEventListener('animationend', animationend);
-	    };
-	
-	    for (var _iterator3 = el.querySelectorAll('[data-ui]')[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	      _loop();
-	    }
-	  } catch (err) {
-	    _didIteratorError3 = true;
-	    _iteratorError3 = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	        _iterator3.return();
-	      }
-	    } finally {
-	      if (_didIteratorError3) {
-	        throw _iteratorError3;
-	      }
-	    }
-	  }
+	  Behaviors.showKeyboard(el);
+	  Event.emit(Behaviors.el, 'didopen');
 	};
 	
 	Behaviors.dismissKeyboard = function (el) {
-	  el._transitioning = true;
-	  var _iteratorNormalCompletion5 = true;
-	  var _didIteratorError5 = false;
-	  var _iteratorError5 = undefined;
-	
-	  try {
-	    var _loop2 = function _loop2() {
-	      var item = _step5.value;
-	      var _iteratorNormalCompletion6 = true;
-	      var _didIteratorError6 = false;
-	      var _iteratorError6 = undefined;
-	
-	      try {
-	        for (var _iterator6 = item.children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	          var child = _step6.value;
-	
-	          child.setAttribute('show', true);
-	        }
-	      } catch (err) {
-	        _didIteratorError6 = true;
-	        _iteratorError6 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion6 && _iterator6.return) {
-	            _iterator6.return();
-	          }
-	        } finally {
-	          if (_didIteratorError6) {
-	            throw _iteratorError6;
-	          }
-	        }
-	      }
-	
-	      el.isOpen = false;
-	      function animationend() {
-	        item.children[1].removeEventListener('animationend', animationend);
-	        setTimeout(function () {
-	          function animationend() {
-	            item.children[0].removeEventListener('animationend', animationend);
-	            Behaviors.hideKeyboard(el);
-	            Event.emit(Behaviors.el, 'diddismiss');
-	            el._transitioning = false;
-	          }
-	          item.children[0].setAttribute('fadeout', { duration: 160 });
-	          item.children[0].addEventListener('animationend', animationend);
-	        }, 10);
-	      }
-	      item.children[1].setAttribute('fadeout', { duration: 160 });
-	      item.children[1].addEventListener('animationend', animationend);
-	    };
-	
-	    for (var _iterator5 = el.querySelectorAll('[data-ui]')[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	      _loop2();
-	    }
-	  } catch (err) {
-	    _didIteratorError5 = true;
-	    _iteratorError5 = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	        _iterator5.return();
-	      }
-	    } finally {
-	      if (_didIteratorError5) {
-	        throw _iteratorError5;
-	      }
-	    }
-	  }
+	  Behaviors.hideKeyboard(el);
+	  Event.emit(Behaviors.el, 'diddismiss');
 	};
 	
 	// -----------------------------------------------------------------------------
@@ -1155,10 +903,8 @@
 	  el.addEventListener('click', Behaviors.keyClick);
 	  el.addEventListener('mousedown', Behaviors.keyDown);
 	  el.addEventListener('mouseup', Behaviors.keyOut);
-	  el.addEventListener('mouseleave', Behaviors.keyOut);
-	  el.addEventListener('mouseenter', Behaviors.keyIn);
-	  //el.addEventListener('raycaster-intersected', Behaviors.keyIn );
-	  //el.addEventListener('raycaster-intersected-cleared', Behaviors.keyOut );
+	  el.addEventListener('raycaster-intersected', Behaviors.keyIn);
+	  el.addEventListener('raycaster-intersected-cleared', Behaviors.keyOut);
 	  //triggerdown
 	  // https://aframe.io/docs/0.6.0/components/hand-controls.html
 	};
@@ -1191,6 +937,7 @@
 	    Event.emit(Behaviors.el, 'backspace');
 	  } else if (type === 'enter') {
 	    Event.emit(Behaviors.el, 'input', '\n');
+	    Event.emit(Behaviors.el, 'enter', '\n');
 	  } else if (type === 'dismiss') {
 	    Event.emit(Behaviors.el, 'dismiss');
 	  }
@@ -1200,9 +947,6 @@
 	// KEYDOWN
 	
 	Behaviors.keyDown = function () {
-	  if (Behaviors.el._transitioning) {
-	    return;
-	  }
 	  this.object3D.position.z = 0.003;
 	  if (this.getAttribute('key-type') === 'spacebar') {
 	    this.setAttribute('color', Config.SPACEBAR_COLOR_ACTIVE);
@@ -1215,9 +959,6 @@
 	// KEYIN
 	
 	Behaviors.keyIn = function () {
-	  if (Behaviors.el._transitioning) {
-	    return;
-	  }
 	  if (this.object3D.children[2] && this.object3D.children[2].material && !this.object3D.children[2].material.opacity) {
 	    return;
 	  }
@@ -1250,18 +991,18 @@
 	
 	  var icon_el = Behaviors.el.shiftKey.querySelector('[data-type]');
 	  if (Behaviors.isShiftEnabled) {
-	    icon_el.setAttribute('src', '#aframeKeyboardShiftActive');
+	    icon_el.setAttribute('src', Assets.aframeKeyboardShiftActive);
 	  } else {
-	    icon_el.setAttribute('src', '#aframeKeyboardShift');
+	    icon_el.setAttribute('src', Assets.aframeKeyboardShift);
 	  }
 	
-	  var _iteratorNormalCompletion7 = true;
-	  var _didIteratorError7 = false;
-	  var _iteratorError7 = undefined;
+	  var _iteratorNormalCompletion = true;
+	  var _didIteratorError = false;
+	  var _iteratorError = undefined;
 	
 	  try {
-	    for (var _iterator7 = document.querySelectorAll("[key-id]")[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	      var keyEl = _step7.value;
+	    for (var _iterator = document.querySelectorAll("[key-id]")[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	      var keyEl = _step.value;
 	
 	      var key_id = keyEl.getAttribute('key-id'),
 	          key_type = keyEl.getAttribute('key-type');
@@ -1277,16 +1018,16 @@
 	      }
 	    }
 	  } catch (err) {
-	    _didIteratorError7 = true;
-	    _iteratorError7 = err;
+	    _didIteratorError = true;
+	    _iteratorError = err;
 	  } finally {
 	    try {
-	      if (!_iteratorNormalCompletion7 && _iterator7.return) {
-	        _iterator7.return();
+	      if (!_iteratorNormalCompletion && _iterator.return) {
+	        _iterator.return();
 	      }
 	    } finally {
-	      if (_didIteratorError7) {
-	        throw _iteratorError7;
+	      if (_didIteratorError) {
+	        throw _iteratorError;
 	      }
 	    }
 	  }
@@ -1315,10 +1056,24 @@
 	module.exports = Behaviors;
 
 /***/ }),
-/* 12 */
+/* 10 */
 /***/ (function(module, exports) {
 
+	"use strict";
+	
+	module.exports = {
+	  emit: function emit(el, name, data) {
+	    el.dispatchEvent(new CustomEvent(name, { detail: data }));
+	  }
+	};
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	'use strict';
+	
+	var Assets = __webpack_require__(12);
 	
 	var SFX = {
 	
@@ -1326,14 +1081,14 @@
 	    var el = document.createElement('a-sound');
 	    el.setAttribute('key', 'aframeKeyboardKeyInSound');
 	    el.setAttribute('sfx', true);
-	    el.setAttribute('src', '#aframeKeyboardKeyIn');
+	    el.setAttribute('src', Assets.aframeKeyboardKeyIn);
 	    el.setAttribute('position', '0 2 5');
 	    parent.appendChild(el);
 	
 	    el = document.createElement('a-sound');
 	    el.setAttribute('key', 'aframeKeyboardKeyDownSound');
 	    el.setAttribute('sfx', true);
-	    el.setAttribute('src', '#aframeKeyboardKeyDown');
+	    el.setAttribute('src', Assets.aframeKeyboardKeyDown);
 	    el.setAttribute('position', '0 2 5');
 	    parent.appendChild(el);
 	  },
@@ -1360,13 +1115,31 @@
 	module.exports = SFX;
 
 /***/ }),
+/* 12 */
+/***/ (function(module, exports) {
+
+	"use strict";
+	
+	module.exports = {
+	  aframeKeyboardShift: AFRAME.ASSETS_PATH + "/images/ShiftIcon.png",
+	  aframeKeyboardShiftActive: AFRAME.ASSETS_PATH + "/images/ShiftActiveIcon.png",
+	  aframeKeyboardGlobal: AFRAME.ASSETS_PATH + "/images/GlobalIcon.png",
+	  aframeKeyboardBackspace: AFRAME.ASSETS_PATH + "/images/BackspaceIcon.png",
+	  aframeKeyboardEnter: AFRAME.ASSETS_PATH + "/images/EnterIcon.png",
+	  aframeKeyboardDismiss: AFRAME.ASSETS_PATH + "/images/DismissIcon.png",
+	  aframeKeyboardShadow: AFRAME.ASSETS_PATH + "/images/KeyShadow.png",
+	  aframeKeyboardKeyIn: AFRAME.ASSETS_PATH + "/sounds/KeyIn.mp3",
+	  aframeKeyboardKeyDown: AFRAME.ASSETS_PATH + "/sounds/KeyDown.mp3"
+	};
+
+/***/ }),
 /* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	
 	/*
 	@BUG: Space has not effect when no letter comes after.
@@ -1459,16 +1232,12 @@
 	  },
 	  isFocused: false,
 	  focus: function focus(noemit) {
-	    if (this.isFocused) {
-	      return;
-	    }
+	    if (this.isFocused) return;
 	    this.isFocused = true;
 	    this.cursor.setAttribute('visible', true);
 	    this.blink();
 	    Event.emit(this.el, 'focus');
-	    if (!noemit) {
-	      Event.emit(document.body, 'didfocusinput', this.el);
-	    }
+	    if (!noemit) Event.emit(document.body, 'didfocusinput', this.el);
 	  },
 	  blur: function blur(noemit) {
 	    if (!this.isFocused) {
@@ -1660,11 +1429,7 @@
 	
 	    this.updateCursor();
 	    this.updateText();
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-input', {
@@ -1702,8 +1467,8 @@
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	var Assets = __webpack_require__(15);
 	var SFX = __webpack_require__(16);
 	
@@ -1800,11 +1565,7 @@
 	    if (this.data.disabled) {
 	      this.disable();
 	    }
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-switch', {
@@ -1883,17 +1644,12 @@
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	
 	AFRAME.registerComponent('form', {
 	  schema: {},
-	  init: function init() {},
-	  update: function update() {},
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  init: function init() {}
 	});
 	
 	AFRAME.registerPrimitive('a-form', {
@@ -1909,8 +1665,8 @@
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	var Assets = __webpack_require__(19);
 	var SFX = __webpack_require__(20);
 	
@@ -2145,11 +1901,7 @@
 	        }, 10);
 	      }
 	    }, 0);
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-radio', {
@@ -2233,8 +1985,8 @@
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	var Assets = __webpack_require__(22);
 	var SFX = __webpack_require__(23);
 	
@@ -2303,7 +2055,8 @@
 	      if (this.components.checkbox.data.disabled) {
 	        return;
 	      }
-	      this.setAttribute('checked', !this.components.checkbox.data.checked);
+	      this.components.checkbox.data.checked = !this.components.checkbox.data.checked;
+	      this.setAttribute('checked', this.components.checkbox.data.checked);
 	      that.onClick();
 	    });
 	    this.el.addEventListener('mousedown', function () {
@@ -2431,11 +2184,7 @@
 	        }, 10);
 	      }
 	    }, 0);
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-checkbox', {
@@ -2519,8 +2268,8 @@
 
 	'use strict';
 	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
+	var Utils = __webpack_require__(4);
+	var Event = __webpack_require__(10);
 	var Assets = __webpack_require__(25);
 	var SFX = __webpack_require__(26);
 	
@@ -2599,9 +2348,6 @@
 	      enumerable: true,
 	      configurable: true
 	    });
-	  },
-	  onClick: function onClick() {
-	    //Event.emit(this.el, 'click');
 	  },
 	  getWidth: function getWidth() {
 	    return this.__width;
@@ -2707,11 +2453,7 @@
 	        }, 10);
 	      }
 	    }, 0);
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
+	  }
 	});
 	
 	AFRAME.registerPrimitive('a-button', {
@@ -2776,222 +2518,6 @@
 	
 	  clickDisabled: function clickDisabled(parent) {
 	    var el = parent.querySelector('[key=aframeButtonClickDisabledSound]');
-	    if (!el) {
-	      return;
-	    }
-	    el.components.sound.stopSound();
-	    el.components.sound.playSound();
-	  }
-	};
-	
-	module.exports = SFX;
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	var Utils = __webpack_require__(6);
-	var Event = __webpack_require__(4);
-	var Assets = __webpack_require__(28);
-	var SFX = __webpack_require__(29);
-	
-	AFRAME.registerComponent('toast', {
-	  schema: {
-	    message: { type: 'string', default: "You are cool" },
-	    action: { type: 'string', default: "" },
-	    backgroundColor: { type: "color", default: "#222" }, //242f35
-	    actionColor: { type: "color", default: "#4076fd" },
-	    color: { type: "color", default: "#FFF" },
-	    font: { type: "string", default: "" },
-	    letterSpacing: { type: "int", default: 0 },
-	    lineHeight: { type: "string", default: "" },
-	    width: { type: "number", default: 3 },
-	    duration: { type: 'number', default: 2000 },
-	    autoshow: { type: 'boolean', default: true }
-	  },
-	  init: function init() {
-	    var that = this;
-	
-	    // Assets
-	    Utils.preloadAssets(Assets);
-	
-	    // SFX
-	    SFX.init(this.el);
-	
-	    // CONFIG
-	    this.el.setAttribute("position", '10000 10000 10000');
-	    this.el.setAttribute("rotation", "-25 0 0");
-	    this.el.setAttribute("scale", "0.3 0.3 0.3");
-	
-	    // OUTLINE
-	    this.background = document.createElement('a-rounded');
-	    this.background.setAttribute('height', 0.44);
-	    this.background.setAttribute('radius', 0.03);
-	    this.background.setAttribute('position', '0 -' + 0.36 / 2 + ' 0.001');
-	    this.el.appendChild(this.background);
-	
-	    // LABEL
-	    this.label = document.createElement('a-entity');
-	    this.el.appendChild(this.label);
-	
-	    // LABEL
-	    this.action = document.createElement('a-button');
-	    that.action.setAttribute('button-color', '#222');
-	    this.el.appendChild(this.action);
-	
-	    function changeWidth(e) {
-	      var attr = that.label.getAttribute('text');
-	      attr.width = that.data.width - e.detail;
-	      attr.wrapCount = 10 * attr.width;
-	      that.label.setAttribute('text', attr);
-	      that.label.setAttribute('position', attr.width / 2 + 0.14 + ' 0.04 0.001');
-	
-	      this.setAttribute('position', that.data.width - e.detail + ' ' + (0.44 - 0.36) / 2 + ' 0.001');
-	    }
-	    this.action.addEventListener('change:width', changeWidth);
-	    this.action.addEventListener('click', function () {
-	      Event.emit(that.el, 'actionclick');
-	    });
-	
-	    var timer = setInterval(function () {
-	      if (that.action.object3D && that.action.object3D.children[0]) {
-	        clearInterval(timer);
-	        Utils.updateOpacity(that.el, 0);
-	        Utils.updateOpacity(that.label, 0);
-	        Utils.updateOpacity(that.action, 0);
-	        if (that.data.autoshow) {
-	          that.show();
-	        }
-	      }
-	    }, 10);
-	
-	    // METHDOS
-	    this.el.show = this.show.bind(this);
-	    this.el.hide = this.hide.bind(this);
-	  },
-	  show: function show() {
-	    if (this.hideTimer) {
-	      clearTimeout(this.hideTimer);
-	    }
-	    this.el.setAttribute("position", -this.data.width / (2 / this.el.object3D.scale.x) + ' 0.25 -1.6');
-	    var that = this;
-	    /*if (!this.el.parentNode && this.el._parentNode) {
-	      this.el._parentNode.appendChild(this.el);
-	    }*/
-	    setTimeout(function () {
-	      that.el.setAttribute('fadein', { duration: 160 });
-	      setTimeout(function () {
-	        Utils.updateOpacity(that.label, 1);
-	        that.action.components.button.shadow.setAttribute('visible', false);
-	      }, 10);
-	    }, 0);
-	    this.hideTimer = setTimeout(function () {
-	      that.hide();
-	    }, this.data.duration);
-	
-	    SFX.show(this.el);
-	  },
-	  hide: function hide() {
-	    var that = this;
-	    setTimeout(function () {
-	      Utils.updateOpacity(that.label, 0);
-	      that.action.components.button.shadow.setAttribute('visible', false);
-	      setTimeout(function () {
-	        that.el.setAttribute('fadeout', { duration: 160 });
-	        setTimeout(function () {
-	          /*if (that.el.parentNode) {
-	            that.el._parentNode = that.el.parentNode;
-	            that.el.parentNode.removeChild(that.el);
-	          }*/
-	          that.el.setAttribute("position", '10000 10000 10000');
-	        }, 200);
-	      }, 10);
-	    }, 0);
-	  },
-	  update: function update() {
-	    var that = this;
-	
-	    // BACKGROUND
-	    this.background.setAttribute('color', this.data.backgroundColor);
-	    this.background.setAttribute('width', this.data.width);
-	
-	    var props = {
-	      color: this.data.color,
-	      align: 'left',
-	      wrapCount: 10 * this.data.width,
-	      width: this.data.width,
-	      lineHeight: 64
-	    };
-	    if (this.data.font) {
-	      props.font = this.data.font;
-	    }
-	
-	    if (this.data.type === "flat") {
-	      props.color = this.data.buttonColor;
-	    }
-	
-	    // MESSAGE
-	    props.value = this.data.message;
-	    this.label.setAttribute('text', props);
-	    this.label.setAttribute('position', this.data.width / 2 + 0.14 + ' 0 0.001');
-	
-	    // ACTION
-	    this.action.setAttribute('value', this.data.action.toUpperCase());
-	    this.action.setAttribute('color', this.data.actionColor);
-	  },
-	  tick: function tick() {},
-	  remove: function remove() {},
-	  pause: function pause() {},
-	  play: function play() {}
-	});
-	
-	AFRAME.registerPrimitive('a-toast', {
-	  defaultComponents: {
-	    toast: {}
-	  },
-	  mappings: {
-	    message: 'toast.message',
-	    action: 'toast.action',
-	    'action-color': 'toast.actionColor',
-	    'background-color': 'toast.backgroundColor',
-	    color: 'toast.color',
-	    font: 'toast.font',
-	    'letter-spacing': 'toast.letterSpacing',
-	    'line-height': 'toast.lineHeight',
-	    'width': 'toast.width',
-	    'duration': 'toast.duration',
-	    'autoshow': 'toast.autoshow'
-	  }
-	});
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports) {
-
-	'use strict';
-	
-	module.exports = [{ type: 'audio', id: 'aframeToastShow', src: AFRAME.ASSETS_PATH + '/sounds/ToastShow.mp3' }];
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports) {
-
-	'use strict';
-	
-	var SFX = {
-	  init: function init(parent) {
-	    var el = document.createElement('a-sound');
-	    el.setAttribute('key', 'aframeToastShowSound');
-	    el.setAttribute('sfx', true);
-	    el.setAttribute('src', '#aframeToastShow');
-	    el.setAttribute('position', '0 2 5');
-	    parent.appendChild(el);
-	  },
-	
-	  show: function show(parent) {
-	    var el = parent.querySelector('[key=aframeToastShowSound]');
 	    if (!el) {
 	      return;
 	    }

@@ -86,12 +86,12 @@ AFRAME.registerComponent('input', {
   },
   isFocused: false,
   focus: function(noemit) {
-    if (this.isFocused) { return; }
+    if (this.isFocused) return;
     this.isFocused = true;
     this.cursor.setAttribute('visible', true);
     this.blink();
     Event.emit(this.el, 'focus');
-    if (!noemit) { Event.emit(document.body, 'didfocusinput', this.el); }
+    if (!noemit) Event.emit(document.body, 'didfocusinput', this.el);
   },
   blur: function(noemit) {
     if (!this.isFocused) { return; }
@@ -261,11 +261,7 @@ AFRAME.registerComponent('input', {
 
     this.updateCursor();
     this.updateText();
-  },
-  tick: function () {},
-  remove: function () {},
-  pause: function () {},
-  play: function () {}
+  }
 });
 
 AFRAME.registerPrimitive('a-input', {

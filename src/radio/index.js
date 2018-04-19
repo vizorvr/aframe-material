@@ -188,11 +188,7 @@ AFRAME.registerComponent('radio', {
         }, 10)
       }
     }, 0);
-  },
-  tick: function () {},
-  remove: function () {},
-  pause: function () {},
-  play: function () {}
+  }
 });
 
 AFRAME.registerPrimitive('a-radio', {
